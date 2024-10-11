@@ -213,7 +213,7 @@ class Translator(QObject):
             original_image_path = f"captured_image_{timestamp}.png"
             screenshot.save(original_image_path)
             
-            api_key = 'K86560535088957'  
+            api_key = ''  
             url = 'https://api.ocr.space/parse/image'
             
             with open(original_image_path, 'rb') as file:
