@@ -238,7 +238,6 @@ class Translator(QObject):
             self.buffer = ""
 
     def translate_text(self, source_text, target_lang, source_lang):
-        print(f"{source_text=} {target_lang=} {source_lang=}")
         try:
             translator = GoogleTranslator(source='auto', target=target_lang)
             translated = translator.translate(source_text)
@@ -332,7 +331,6 @@ class Translator(QObject):
             raise Exception(result.get('ErrorMessage', ['Unknown error'])[0])
         
         text = result['ParsedResults'][0]['ParsedText']
-        print(f"{text=}")
 
         if text.strip():
             translated = self.translate_text(text, self.ocr_target_lang, self.ocr_source_lang)
