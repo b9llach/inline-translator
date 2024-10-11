@@ -1,7 +1,8 @@
 import time
 import threading
-from PyQt6.QtCore import QObject, QTimer
-from PyQt6.QtGui import QGuiApplication
+from PyQt6.QtCore import QObject, QTimer, QRect, Qt
+from PyQt6.QtGui import QGuiApplication, QPainter, QColor
+from PyQt6.QtWidgets import QApplication, QWidget, QRubberBand
 from deep_translator import GoogleTranslator
 import pyautogui
 import pyperclip
@@ -18,11 +19,11 @@ from gui import TranslatorGUI
 from datetime import datetime
 import requests
 from PIL import ImageGrab
-
-key = 'K86560535088957'
+from screen_capture import ScreenCaptureWidget
+from dotenv import load_dotenv
+load_dotenv()
 
 is_typing = False
-
 class BITMAPINFOHEADER(ctypes.Structure):
     _fields_ = [
         ("biSize", wintypes.DWORD),
@@ -76,6 +77,8 @@ class Translator(QObject):
 
         gTTS("Translation on").save(self.on_file)
         gTTS("Translation off").save(self.off_file)
+
+        self.screen_capture_widget = None
 
     def set_translating(self, state):
         self.translating = state
@@ -202,51 +205,61 @@ class Translator(QObject):
     
     def capture_and_translate(self):
         try:
-            screen = QGuiApplication.primaryScreen()
-            geometry = screen.geometry()
-            
-            screenshot = ImageGrab.grab(bbox=(geometry.x(), geometry.y(), 
-                                              geometry.x() + geometry.width(), 
-                                              geometry.y() + geometry.height()))
-            
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            original_image_path = f"captured_image_{timestamp}.png"
-            screenshot.save(original_image_path)
-            
-            api_key = ''  
-            url = 'https://api.ocr.space/parse/image'
-            
-            with open(original_image_path, 'rb') as file:
-                response = requests.post(
-                    url,
-                    files={'filename': file},
-                    data={
-                        'apikey': api_key,
-                        'language': 'eng',  
-                        'isOverlayRequired': False
-                    }
-                )
+            if not self.screen_capture_widget:
+                self.screen_capture_widget = ScreenCaptureWidget()
+                self.screen_capture_widget.area_selected.connect(self.process_selected_area)
 
-            result = response.json()
-            if result['IsErroredOnProcessing']:
-                raise Exception(result['ErrorMessage'][0])
-            
-            text = result['ParsedResults'][0]['ParsedText']
+            # Calculate the bounding rectangle of all screens
+            total_screen = QRect()
+            for screen in QApplication.screens():
+                total_screen = total_screen.united(screen.geometry())
 
-            if text.strip():
-                translated = self.translator.translate(text.strip())
-                output = f"Original: {text}\n\nTranslated: {translated}\n\n"
-                output += f"Original image saved as: {original_image_path}\n"
-                self.gui.update_output(output)
-            else:
-                output = "No text could be extracted from the screen.\n\n"
-                output += f"Original image saved as: {original_image_path}\n"
-                self.gui.update_output(output)
+            # Ensure the widget covers the entire virtual desktop
+            self.screen_capture_widget.setGeometry(total_screen)
+            self.screen_capture_widget.showFullScreen()
+            self.screen_capture_widget.activateWindow()
 
         except Exception as e:
             error_message = f"An error occurred during capture and translation:\n{str(e)}"
             print(error_message)
             self.gui.update_output(error_message)
+
+    def process_selected_area(self, selected_rect):
+        x, y, width, height = selected_rect.getRect()
+
+        screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        original_image_path = f"captured_image_{timestamp}.png"
+        screenshot.save(original_image_path)
+        
+        api_key = os.getenv('KEY')
+        url = 'https://api.ocr.space/parse/image'
+        
+        with open(original_image_path, 'rb') as file:
+            response = requests.post(
+                url,
+                files={'filename': file},
+                data={
+                    'apikey': api_key,
+                    'language': 'eng',  
+                    'isOverlayRequired': False
+                }
+            )
+
+        result = response.json()
+        if result['IsErroredOnProcessing']:
+            raise Exception(result['ErrorMessage'][0])
+        
+        text = result['ParsedResults'][0]['ParsedText']
+
+        if text.strip():
+            translated = self.translator.translate(text.strip())
+            output = f"{translated}\n\n"
+            self.gui.update_output(output)
+        else:
+            output = "No text could be extracted from the screen.\n\n"
+            self.gui.update_output(output)
 
     def __del__(self):
         if os.path.exists(self.on_file):
