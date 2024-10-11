@@ -79,6 +79,60 @@ class Translator(QObject):
         gTTS("Translation off").save(self.off_file)
 
         self.screen_capture_widget = None
+        
+        self.language_codes = {
+            'arabic': 'ar',
+            'bulgarian': 'bg',
+            'chinese (simplified)': 'zh-CN',
+            'chinese (traditional)': 'zh-TW',
+            'croatian': 'hr',
+            'danish': 'da',
+            'dutch': 'nl',
+            'english': 'en',
+            'finnish': 'fi',
+            'french': 'fr',
+            'german': 'de',
+            'greek': 'el',
+            'hungarian': 'hu',
+            'italian': 'it',
+            'japanese': 'ja',
+            'korean': 'ko',
+            'norwegian': 'no',
+            'polish': 'pl',
+            'portuguese': 'pt',
+            'russian': 'ru',
+            'spanish': 'es',
+            'slovenian': 'sl',
+            'swedish': 'sv',
+            'turkish': 'tr'
+        }
+
+        self.ocr_language_codes = {
+            'arabic': 'ara',
+            'bulgarian': 'bul',
+            'chinese (simplified)': 'chs',
+            'chinese (traditional)': 'cht',
+            'croatian': 'hrv',
+            'danish': 'dan',
+            'dutch': 'dut',
+            'english': 'eng',
+            'finnish': 'fin',
+            'french': 'fre',
+            'german': 'ger',
+            'greek': 'gre',
+            'hungarian': 'hun',
+            'italian': 'ita',
+            'japanese': 'jpn',
+            'korean': 'kor',
+            'norwegian': 'nor',
+            'polish': 'pol',
+            'portuguese': 'por',
+            'russian': 'rus',
+            'spanish': 'spa',
+            'slovenian': 'slv',
+            'swedish': 'swe',
+            'turkish': 'tur'
+        }
 
     def set_translating(self, state):
         self.translating = state
@@ -153,13 +207,16 @@ class Translator(QObject):
             self.is_typing_translation = False
             self.buffer = ""
 
-    def translate_text(self, source_text, target_lang):
+    def translate_text(self, source_text, target_lang, source_lang):
         try:
-            translator = GoogleTranslator(source='auto', target=target_lang)
+            translator = GoogleTranslator(source=self.language_codes.get(source_lang, 'auto'), target=self.language_codes.get(target_lang, 'en'))
             translated = translator.translate(source_text)
             self.gui.update_output(translated)
+            return translated
         except Exception as e:
+            print(f"Translation error: {e}")
             self.gui.update_output(f"Translation error: {e}")
+            return "N/A"
 
     def toggle_translation(self):
         self.translating = not self.translating
@@ -203,17 +260,15 @@ class Translator(QObject):
 
         return Image.frombuffer('RGBA', (width, height), buffer, 'raw', 'BGRA', 0, 1)
     
-    def capture_and_translate(self):
+    def capture_and_translate(self, ocr_lang):
         try:
             if not self.screen_capture_widget:
                 self.screen_capture_widget = ScreenCaptureWidget()
-                self.screen_capture_widget.area_selected.connect(self.process_selected_area)
+                self.screen_capture_widget.area_selected.connect(lambda rect: self.process_selected_area(rect, ocr_lang))
 
-            # Get the primary screen
             primary_screen = QApplication.primaryScreen()
             screen_geometry = primary_screen.geometry()
 
-            # Set the widget to cover only the primary screen
             self.screen_capture_widget.setGeometry(screen_geometry)
             self.screen_capture_widget.showFullScreen()
             self.screen_capture_widget.activateWindow()
@@ -223,42 +278,59 @@ class Translator(QObject):
             print(error_message)
             self.gui.update_output(error_message)
 
-    def process_selected_area(self, selected_rect):
+    def process_selected_area(self, selected_rect, ocr_lang):
         x, y, width, height = selected_rect.getRect()
 
         screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
         
         api_key = os.getenv('KEY')
         url = 'https://api.ocr.space/parse/image'
-        
-        # Convert the image to bytes
+
         img_byte_arr = io.BytesIO()
         screenshot.save(img_byte_arr, format='PNG')
         img_byte_arr = img_byte_arr.getvalue()
+        
+        ocr_lang_code = self.ocr_language_codes.get(ocr_lang.lower(), 'eng')
         
         response = requests.post(
             url,
             files={'screenshot.png': img_byte_arr},
             data={
                 'apikey': api_key,
-                'language': 'eng',  
+                'language': ocr_lang_code,
                 'isOverlayRequired': False
             }
         )
 
         result = response.json()
-        if result['IsErroredOnProcessing']:
-            raise Exception(result['ErrorMessage'][0])
+        if result.get('IsErroredOnProcessing'):
+            raise Exception(result.get('ErrorMessage', ['Unknown error'])[0])
         
         text = result['ParsedResults'][0]['ParsedText']
 
         if text.strip():
-            translated = self.translator.translate(text.strip())
+            translated = self.translate_text(text, 'english', 'auto')
             output = f"{translated}\n\n"
             self.gui.update_output(output)
         else:
             output = "No text could be extracted from the screen.\n\n"
             self.gui.update_output(output)
+
+    def capture_and_translate(self):
+        ocr_lang = self.gui.ocr_lang_combo.currentText()
+        try:
+            if not self.screen_capture_widget:
+                self.screen_capture_widget = ScreenCaptureWidget()
+                self.screen_capture_widget.area_selected.connect(lambda rect: self.process_selected_area(rect, ocr_lang))
+
+            primary_screen = QApplication.primaryScreen()
+            screen_geometry = primary_screen.geometry()
+
+            self.screen_capture_widget.setGeometry(screen_geometry)
+            self.screen_capture_widget.showFullScreen()
+            self.screen_capture_widget.activateWindow()
+        except Exception as e:
+            self.gui.update_output(f"Error: {str(e)}\n\n")
 
     def __del__(self):
         if os.path.exists(self.on_file):

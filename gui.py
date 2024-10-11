@@ -5,40 +5,36 @@ from PyQt6.QtGui import QIcon
 class TranslatorGUI(QWidget):
     toggle_signal = pyqtSignal(bool)
     language_signal = pyqtSignal(str)
-    translate_signal = pyqtSignal(str, str)
-    capture_signal = pyqtSignal()
+    translate_signal = pyqtSignal(str, str, str) 
+    capture_signal = pyqtSignal(str)
     
     def __init__(self):
         super().__init__()
         self.language_codes = {
-            'afrikaans': 'af', 'albanian': 'sq', 'amharic': 'am', 'arabic': 'ar', 'armenian': 'hy',
-            'assamese': 'as', 'aymara': 'ay', 'azerbaijani': 'az', 'bambara': 'bm', 'basque': 'eu',
-            'belarusian': 'be', 'bengali': 'bn', 'bhojpuri': 'bho', 'bosnian': 'bs', 'bulgarian': 'bg',
-            'catalan': 'ca', 'cebuano': 'ceb', 'chichewa': 'ny', 'chinese (simplified)': 'zh-CN',
-            'chinese (traditional)': 'zh-TW', 'corsican': 'co', 'croatian': 'hr', 'czech': 'cs',
-            'danish': 'da', 'dhivehi': 'dv', 'dogri': 'doi', 'dutch': 'nl', 'english': 'en',
-            'esperanto': 'eo', 'estonian': 'et', 'ewe': 'ee', 'filipino': 'tl', 'finnish': 'fi',
-            'french': 'fr', 'frisian': 'fy', 'galician': 'gl', 'georgian': 'ka', 'german': 'de',
-            'greek': 'el', 'guarani': 'gn', 'gujarati': 'gu', 'haitian creole': 'ht', 'hausa': 'ha',
-            'hawaiian': 'haw', 'hebrew': 'iw', 'hindi': 'hi', 'hmong': 'hmn', 'hungarian': 'hu',
-            'icelandic': 'is', 'igbo': 'ig', 'ilocano': 'ilo', 'indonesian': 'id', 'irish': 'ga',
-            'italian': 'it', 'japanese': 'ja', 'javanese': 'jw', 'kannada': 'kn', 'kazakh': 'kk',
-            'khmer': 'km', 'kinyarwanda': 'rw', 'konkani': 'gom', 'korean': 'ko', 'krio': 'kri',
-            'kurdish (kurmanji)': 'ku', 'kurdish (sorani)': 'ckb', 'kyrgyz': 'ky', 'lao': 'lo',
-            'latin': 'la', 'latvian': 'lv', 'lingala': 'ln', 'lithuanian': 'lt', 'luganda': 'lg',
-            'luxembourgish': 'lb', 'macedonian': 'mk', 'maithili': 'mai', 'malagasy': 'mg',
-            'malay': 'ms', 'malayalam': 'ml', 'maltese': 'mt', 'maori': 'mi', 'marathi': 'mr',
-            'meiteilon (manipuri)': 'mni-Mtei', 'mizo': 'lus', 'mongolian': 'mn', 'myanmar': 'my',
-            'nepali': 'ne', 'norwegian': 'no', 'odia (oriya)': 'or', 'oromo': 'om', 'pashto': 'ps',
-            'persian': 'fa', 'polish': 'pl', 'portuguese': 'pt', 'punjabi': 'pa', 'quechua': 'qu',
-            'romanian': 'ro', 'russian': 'ru', 'samoan': 'sm', 'sanskrit': 'sa', 'scots gaelic': 'gd',
-            'sepedi': 'nso', 'serbian': 'sr', 'sesotho': 'st', 'shona': 'sn', 'sindhi': 'sd',
-            'sinhala': 'si', 'slovak': 'sk', 'slovenian': 'sl', 'somali': 'so', 'spanish': 'es',
-            'sundanese': 'su', 'swahili': 'sw', 'swedish': 'sv', 'tajik': 'tg', 'tamil': 'ta',
-            'tatar': 'tt', 'telugu': 'te', 'thai': 'th', 'tigrinya': 'ti', 'tsonga': 'ts',
-            'turkish': 'tr', 'turkmen': 'tk', 'twi': 'ak', 'ukrainian': 'uk', 'urdu': 'ur',
-            'uyghur': 'ug', 'uzbek': 'uz', 'vietnamese': 'vi', 'welsh': 'cy', 'xhosa': 'xh',
-            'yiddish': 'yi', 'yoruba': 'yo', 'zulu': 'zu'
+            'arabic': 'ar',
+            'bulgarian': 'bg',
+            'chinese (simplified)': 'zh-CN',
+            'chinese (traditional)': 'zh-TW',
+            'croatian': 'hr',
+            'danish': 'da',
+            'dutch': 'nl',
+            'english': 'en',
+            'finnish': 'fi',
+            'french': 'fr',
+            'german': 'de',
+            'greek': 'el',
+            'hungarian': 'hu',
+            'italian': 'it',
+            'japanese': 'ja',
+            'korean': 'ko',
+            'norwegian': 'no',
+            'polish': 'pl',
+            'portuguese': 'pt',
+            'russian': 'ru',
+            'spanish': 'es',
+            'slovenian': 'sl',
+            'swedish': 'sv',
+            'turkish': 'tr'
         }
         self.initUI()
 
@@ -66,12 +62,7 @@ class TranslatorGUI(QWidget):
         self.lang_combo.addItems(self.all_languages)
         self.lang_combo.currentTextChanged.connect(self.change_language)
 
-        self.search_bar = QLineEdit()
-        self.search_bar.setPlaceholderText("Search languages...")
-        self.search_bar.textChanged.connect(self.filter_languages)
-
         lang_layout = QVBoxLayout()
-        lang_layout.addWidget(self.search_bar)
         lang_layout.addWidget(self.lang_combo)
         
         control_layout.addWidget(lang_label)
@@ -83,6 +74,14 @@ class TranslatorGUI(QWidget):
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator)
+
+        ocr_layout = QHBoxLayout()
+        ocr_lang_label = QLabel('OCR Language:')
+        self.ocr_lang_combo = QComboBox()
+        self.ocr_lang_combo.addItems(['english'] + [lang for lang in self.language_codes.keys()])
+        ocr_layout.addWidget(ocr_lang_label)
+        ocr_layout.addWidget(self.ocr_lang_combo)
+        layout.addLayout(ocr_layout)
 
         translation_layout = QHBoxLayout()
         
@@ -120,7 +119,9 @@ class TranslatorGUI(QWidget):
 
     def translate_text(self):
         source_text = self.input_text.toPlainText()
-        self.translate_signal.emit(source_text, self.lang_combo.currentText().lower())
+        target_lang = self.lang_combo.currentText().lower()
+        source_lang = self.ocr_lang_combo.currentText().lower()
+        self.translate_signal.emit(source_text, target_lang, source_lang)
 
     def update_output(self, translated_text):
         self.output_text.setPlainText(translated_text)
@@ -131,4 +132,5 @@ class TranslatorGUI(QWidget):
         self.lang_combo.addItems(filtered_languages)
 
     def capture_screen(self):
-        self.capture_signal.emit()
+        ocr_lang = self.ocr_lang_combo.currentText().lower()
+        self.capture_signal.emit(ocr_lang)
