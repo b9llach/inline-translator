@@ -1,8 +1,7 @@
 import time
 import threading
 from PyQt6.QtCore import QObject, QTimer, QRect, Qt
-from PyQt6.QtGui import QGuiApplication, QPainter, QColor
-from PyQt6.QtWidgets import QApplication, QWidget, QRubberBand
+from PyQt6.QtWidgets import QApplication
 from deep_translator import GoogleTranslator
 import pyautogui
 import pyperclip
@@ -16,10 +15,10 @@ from ctypes import wintypes
 from PIL import Image
 from keyboard_input import KeyboardListener
 from gui import TranslatorGUI
-from datetime import datetime
 import requests
 from PIL import ImageGrab
 from screen_capture import ScreenCaptureWidget
+import io
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -58,6 +57,7 @@ class Translator(QObject):
         self.gui.toggle_signal.connect(self.set_translating)
         self.gui.language_signal.connect(self.set_language)
         self.gui.translate_signal.connect(self.translate_text)
+        self.gui.capture_signal.connect(self.capture_and_translate)
         self.gui.show()
 
         self.keyboard_listener = KeyboardListener()
@@ -209,13 +209,12 @@ class Translator(QObject):
                 self.screen_capture_widget = ScreenCaptureWidget()
                 self.screen_capture_widget.area_selected.connect(self.process_selected_area)
 
-            # Calculate the bounding rectangle of all screens
-            total_screen = QRect()
-            for screen in QApplication.screens():
-                total_screen = total_screen.united(screen.geometry())
+            # Get the primary screen
+            primary_screen = QApplication.primaryScreen()
+            screen_geometry = primary_screen.geometry()
 
-            # Ensure the widget covers the entire virtual desktop
-            self.screen_capture_widget.setGeometry(total_screen)
+            # Set the widget to cover only the primary screen
+            self.screen_capture_widget.setGeometry(screen_geometry)
             self.screen_capture_widget.showFullScreen()
             self.screen_capture_widget.activateWindow()
 
@@ -229,23 +228,23 @@ class Translator(QObject):
 
         screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        original_image_path = f"captured_image_{timestamp}.png"
-        screenshot.save(original_image_path)
-        
         api_key = os.getenv('KEY')
         url = 'https://api.ocr.space/parse/image'
         
-        with open(original_image_path, 'rb') as file:
-            response = requests.post(
-                url,
-                files={'filename': file},
-                data={
-                    'apikey': api_key,
-                    'language': 'eng',  
-                    'isOverlayRequired': False
-                }
-            )
+        # Convert the image to bytes
+        img_byte_arr = io.BytesIO()
+        screenshot.save(img_byte_arr, format='PNG')
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        response = requests.post(
+            url,
+            files={'screenshot.png': img_byte_arr},
+            data={
+                'apikey': api_key,
+                'language': 'eng',  
+                'isOverlayRequired': False
+            }
+        )
 
         result = response.json()
         if result['IsErroredOnProcessing']:

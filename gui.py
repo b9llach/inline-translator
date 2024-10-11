@@ -1,11 +1,13 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QTextEdit, QSplitter, QFrame, QLineEdit
 from PyQt6.QtCore import Qt, pyqtSignal
+from PyQt6.QtGui import QIcon
 
 class TranslatorGUI(QWidget):
     toggle_signal = pyqtSignal(bool)
     language_signal = pyqtSignal(str)
     translate_signal = pyqtSignal(str, str)
-
+    capture_signal = pyqtSignal()
+    
     def __init__(self):
         super().__init__()
         self.language_codes = {
@@ -50,6 +52,11 @@ class TranslatorGUI(QWidget):
         self.toggle_button = QPushButton('Turn On', self)
         self.toggle_button.clicked.connect(self.toggle_translation)
         control_layout.addWidget(self.toggle_button)
+
+        self.camera_button = QPushButton('📷', self)
+        self.camera_button.setToolTip('Capture Screen Area')
+        self.camera_button.clicked.connect(self.capture_screen)
+        control_layout.addWidget(self.camera_button)
 
         lang_label = QLabel('Target Language:')
         self.lang_combo = QComboBox()
@@ -122,3 +129,6 @@ class TranslatorGUI(QWidget):
         self.lang_combo.clear()
         filtered_languages = [lang for lang in self.all_languages if text.lower() in lang.lower()]
         self.lang_combo.addItems(filtered_languages)
+
+    def capture_screen(self):
+        self.capture_signal.emit()
