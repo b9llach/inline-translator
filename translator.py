@@ -1,6 +1,6 @@
 import time
 import threading
-from PyQt6.QtCore import QObject, QTimer, QRect, Qt
+from PyQt6.QtCore import QObject, QTimer
 from PyQt6.QtWidgets import QApplication
 from deep_translator import GoogleTranslator
 import pyautogui
@@ -20,6 +20,7 @@ from PIL import ImageGrab
 from screen_capture import ScreenCaptureWidget
 import io
 from dotenv import load_dotenv
+
 load_dotenv()
 
 is_typing = False
@@ -61,7 +62,6 @@ class Translator(QObject):
         self.gui.ocr_languages_changed_signal.connect(self.update_ocr_languages)
         self.gui.show()
 
-        # Initialize OCR language attributes
         self.ocr_source_lang = 'english'
         self.ocr_target_lang = 'english'
 
