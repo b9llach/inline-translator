@@ -105,7 +105,7 @@ class Translator(QObject):
                 self.buffer += key
 
         self.translation_timer.stop()
-        self.translation_timer.start(650) 
+        self.translation_timer.start(1250) 
 
     def delayed_translate(self):
         if self.buffer.strip() and self.buffer.strip() != self.last_translated:
@@ -144,7 +144,7 @@ class Translator(QObject):
             
             self.buffer = ""
         except Exception as e:
-            print(f"Translation error: {e}")
+            pass
         finally:
             is_typing = False
             self.is_typing_translation = False
@@ -213,7 +213,7 @@ class Translator(QObject):
             original_image_path = f"captured_image_{timestamp}.png"
             screenshot.save(original_image_path)
             
-            api_key = ''  
+            api_key = 'K86560535088957'  
             url = 'https://api.ocr.space/parse/image'
             
             with open(original_image_path, 'rb') as file:
