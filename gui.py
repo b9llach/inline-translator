@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QTextEdit, QSplitter, QFrame, QLineEdit
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QIcon
+from deep_translator import GoogleTranslator
 
 class TranslatorGUI(QWidget):
     toggle_signal = pyqtSignal(bool)
@@ -89,6 +90,8 @@ class TranslatorGUI(QWidget):
             'western frisian': 'fy', 'wolof': 'wo', 'xhosa': 'xh', 'yakut': 'sah', 'yiddish': 'yi',
             'yoruba': 'yo', 'yucatec maya': 'yua', 'zapotec': 'zap', 'zulu': 'zu'
         }
+        self.google_languages = GoogleTranslator().get_supported_languages(as_dict=True)
+        self.language_names = {v: k for k, v in self.google_languages.items()}
         self.initUI()
 
     def initUI(self):
@@ -111,7 +114,9 @@ class TranslatorGUI(QWidget):
         self.lang_combo = QComboBox()
 
         self.lang_combo.clear()
-        self.lang_combo.addItems(['italian'] + list(self.all_languages_dict.keys()))
+        self.lang_combo.addItems(sorted(self.language_names.values()))
+        self.lang_combo.setCurrentText('Italian')  # Set default to Italian
+        self.lang_combo.currentTextChanged.connect(self.change_language)
 
         lang_layout = QVBoxLayout()
         lang_layout.addWidget(self.lang_combo)
@@ -190,8 +195,7 @@ class TranslatorGUI(QWidget):
             self.toggle_signal.emit(False)
 
     def change_language(self, language):
-        code = self.all_languages_dict.get(language, 'en')
-        self.language_signal.emit(code)
+        self.language_signal.emit(language)
 
     def translate_text(self):
         source_text = self.input_text.toPlainText()

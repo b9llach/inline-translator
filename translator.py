@@ -52,8 +52,8 @@ class Translator(QObject):
         self.last_translated = ""
         self.translating = False
         self.is_typing_translation = False
-        self.target_language = 'it' 
-        self.translator = GoogleTranslator(source='auto', target=self.target_language)
+        self.target_language = 'Italian' 
+        self.translator = GoogleTranslator(source='auto', target=self.target_language.lower())
         self.gui = TranslatorGUI()
         self.gui.toggle_signal.connect(self.set_translating)
         self.gui.language_signal.connect(self.set_language)
@@ -167,9 +167,9 @@ class Translator(QObject):
     def set_translating(self, state):
         self.translating = state
 
-    def set_language(self, language_code):
-        self.target_language = language_code
-        self.translator = GoogleTranslator(source='auto', target=self.target_language)
+    def set_language(self, language):
+        self.target_language = language
+        self.translator = GoogleTranslator(source='auto', target=self.target_language.lower())
 
     def on_key_event(self, key):
         global is_typing
@@ -215,9 +215,7 @@ class Translator(QObject):
             if translated != self.last_translated:
                 self.is_typing_translation = True
 
-                pyautogui.hotkey('ctrl', 'a')
-                pyautogui.press('backspace')
-                time.sleep(0.05)
+                pyautogui.press('backspace', presses=len(original_text), interval=0.01)
 
                 is_typing = True
                 pyperclip.copy(translated)
