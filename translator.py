@@ -58,7 +58,12 @@ class Translator(QObject):
         self.gui.language_signal.connect(self.set_language)
         self.gui.translate_signal.connect(self.translate_text)
         self.gui.capture_signal.connect(self.capture_and_translate)
+        self.gui.ocr_languages_changed_signal.connect(self.update_ocr_languages)
         self.gui.show()
+
+        # Initialize OCR language attributes
+        self.ocr_source_lang = 'english'
+        self.ocr_target_lang = 'english'
 
         self.keyboard_listener = KeyboardListener()
         self.keyboard_listener.key_pressed.connect(self.on_key_event)
@@ -233,14 +238,12 @@ class Translator(QObject):
             self.buffer = ""
 
     def translate_text(self, source_text, target_lang, source_lang):
+        print(f"{source_text=} {target_lang=} {source_lang=}")
         try:
-            translator = GoogleTranslator(source=self.language_codes.get(source_lang, 'auto'), target=self.language_codes.get(target_lang, 'en'))
+            translator = GoogleTranslator(source='auto', target=target_lang)
             translated = translator.translate(source_text)
-            self.gui.update_output(translated)
             return translated
         except Exception as e:
-            print(f"Translation error: {e}")
-            self.gui.update_output(f"Translation error: {e}")
             return "N/A"
 
     def toggle_translation(self):
@@ -285,11 +288,11 @@ class Translator(QObject):
 
         return Image.frombuffer('RGBA', (width, height), buffer, 'raw', 'BGRA', 0, 1)
     
-    def capture_and_translate(self, ocr_source_lang, ocr_target_lang):
+    def capture_and_translate(self):
         try:
             if not self.screen_capture_widget:
                 self.screen_capture_widget = ScreenCaptureWidget()
-                self.screen_capture_widget.area_selected.connect(lambda rect: self.process_selected_area(rect, ocr_source_lang, ocr_target_lang))
+                self.screen_capture_widget.area_selected.connect(self.process_selected_area)
 
             primary_screen = QApplication.primaryScreen()
             screen_geometry = primary_screen.geometry()
@@ -300,7 +303,7 @@ class Translator(QObject):
         except Exception as e:
             self.gui.update_output(f"Error: {str(e)}\n\n")
 
-    def process_selected_area(self, selected_rect, ocr_source_lang, ocr_target_lang):
+    def process_selected_area(self, selected_rect):
         x, y, width, height = selected_rect.getRect()
 
         screenshot = ImageGrab.grab(bbox=(x, y, x + width, y + height))
@@ -312,7 +315,7 @@ class Translator(QObject):
         screenshot.save(img_byte_arr, format='PNG')
         img_byte_arr = img_byte_arr.getvalue()
         
-        ocr_lang_code = self.ocr_language_codes.get(ocr_source_lang.lower(), 'eng')
+        ocr_lang_code = self.ocr_language_codes.get(self.ocr_source_lang.lower(), 'eng')
         
         response = requests.post(
             url,
@@ -329,14 +332,19 @@ class Translator(QObject):
             raise Exception(result.get('ErrorMessage', ['Unknown error'])[0])
         
         text = result['ParsedResults'][0]['ParsedText']
+        print(f"{text=}")
 
         if text.strip():
-            translated = self.translate_text(text, ocr_target_lang, ocr_source_lang)
+            translated = self.translate_text(text, self.ocr_target_lang, self.ocr_source_lang)
             output = f"{translated}\n\n"
             self.gui.update_output(output)
         else:
             output = "No text could be extracted from the screen.\n\n"
             self.gui.update_output(output)
+
+    def update_ocr_languages(self, source_lang, target_lang):
+        self.ocr_source_lang = source_lang
+        self.ocr_target_lang = target_lang
 
     def __del__(self):
         if os.path.exists(self.on_file):

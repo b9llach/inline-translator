@@ -7,37 +7,39 @@ class TranslatorGUI(QWidget):
     language_signal = pyqtSignal(str)
     translate_signal = pyqtSignal(str, str, str) 
     capture_signal = pyqtSignal(str, str)
+    ocr_languages_changed_signal = pyqtSignal(str, str) 
     
     def __init__(self):
         super().__init__()
-        self.language_codes = {
-            'arabic': 'ar',
-            'bulgarian': 'bg',
-            'chinese (simplified)': 'zh-CN',
-            'chinese (traditional)': 'zh-TW',
-            'croatian': 'hr',
-            'danish': 'da',
-            'dutch': 'nl',
-            'english': 'en',
-            'finnish': 'fi',
-            'french': 'fr',
-            'german': 'de',
-            'greek': 'el',
-            'hungarian': 'hu',
-            'italian': 'it',
-            'japanese': 'ja',
-            'korean': 'ko',
-            'norwegian': 'no',
-            'polish': 'pl',
-            'portuguese': 'pt',
-            'russian': 'ru',
-            'spanish': 'es',
-            'slovenian': 'sl',
-            'swedish': 'sv',
-            'turkish': 'tr'
+        self.ocr_language_codes = {
+            'arabic': 'ara',
+            'bulgarian': 'bul',
+            'chinese (simplified)': 'chs',
+            'chinese (traditional)': 'cht',
+            'croatian': 'hrv',
+            'czech': 'cze',
+            'danish': 'dan',
+            'dutch': 'dut',
+            'english': 'eng',
+            'finnish': 'fin',
+            'french': 'fre',
+            'german': 'ger',
+            'greek': 'gre',
+            'hungarian': 'hun',
+            'italian': 'ita',
+            'japanese': 'jpn',
+            'korean': 'kor',
+            'norwegian': 'nor',
+            'polish': 'pol',
+            'portuguese': 'por',
+            'russian': 'rus',
+            'spanish': 'spa',
+            'slovenian': 'slv',
+            'swedish': 'swe',
+            'turkish': 'tur'
         }
         
-        self.all_languages_dict = self.language_codes = {
+        self.all_languages_dict = {
             'abkhazian': 'ab', 'acehnese': 'ace', 'acoli': 'ach', 'afar': 'aa', 'afrikaans': 'af',
             'akan': 'ak', 'albanian': 'sq', 'alur': 'alz', 'amharic': 'am', 'arabic': 'ar',
             'armenian': 'hy', 'assamese': 'as', 'avaric': 'av', 'awadhi': 'awa', 'aymara': 'ay',
@@ -108,10 +110,8 @@ class TranslatorGUI(QWidget):
         lang_label = QLabel('Target Language:')
         self.lang_combo = QComboBox()
 
-        self.all_languages = ['italian'] + [lang for lang in self.all_languages_dict.keys()]
-        
-        self.lang_combo.addItems(self.all_languages)
-        self.lang_combo.currentTextChanged.connect(self.change_language)
+        self.lang_combo.clear()
+        self.lang_combo.addItems(['italian'] + list(self.all_languages_dict.keys()))
 
         lang_layout = QVBoxLayout()
         lang_layout.addWidget(self.lang_combo)
@@ -129,17 +129,25 @@ class TranslatorGUI(QWidget):
         ocr_layout = QHBoxLayout()
         ocr_source_lang_label = QLabel('OCR Source Language:')
         self.ocr_source_lang_combo = QComboBox()
-        self.ocr_source_lang_combo.addItems(['english'] + [lang for lang in self.language_codes.keys()])
+        self.ocr_target_lang_combo = QComboBox() 
+        
+        self.ocr_source_lang_combo.clear()
+        self.ocr_target_lang_combo.clear()
+        ocr_languages = ['english'] + list(self.ocr_language_codes.keys())
+        self.ocr_source_lang_combo.addItems(ocr_languages)
+        self.ocr_target_lang_combo.addItems(ocr_languages)
+        
         ocr_layout.addWidget(ocr_source_lang_label)
         ocr_layout.addWidget(self.ocr_source_lang_combo)
 
         ocr_target_lang_label = QLabel('OCR Target Language:')
-        self.ocr_target_lang_combo = QComboBox()
-        self.ocr_target_lang_combo.addItems(['english'] + [lang for lang in self.language_codes.keys()])
         ocr_layout.addWidget(ocr_target_lang_label)
         ocr_layout.addWidget(self.ocr_target_lang_combo)
 
         layout.addLayout(ocr_layout)
+
+        self.ocr_source_lang_combo.currentTextChanged.connect(self.update_ocr_languages)
+        self.ocr_target_lang_combo.currentTextChanged.connect(self.update_ocr_languages)
 
         translation_layout = QHBoxLayout()
         
@@ -163,6 +171,11 @@ class TranslatorGUI(QWidget):
 
         self.setLayout(layout)
 
+    def update_ocr_languages(self):
+        ocr_source_lang = self.ocr_source_lang_combo.currentText().lower()
+        ocr_target_lang = self.ocr_target_lang_combo.currentText().lower()
+        self.ocr_languages_changed_signal.emit(ocr_source_lang, ocr_target_lang)
+
     def capture_screen(self):
         ocr_source_lang = self.ocr_source_lang_combo.currentText().lower()
         ocr_target_lang = self.ocr_target_lang_combo.currentText().lower()
@@ -177,13 +190,13 @@ class TranslatorGUI(QWidget):
             self.toggle_signal.emit(False)
 
     def change_language(self, language):
-        code = self.language_codes.get(language, 'en') 
+        code = self.all_languages_dict.get(language, 'en')
         self.language_signal.emit(code)
 
     def translate_text(self):
         source_text = self.input_text.toPlainText()
         target_lang = self.lang_combo.currentText().lower()
-        source_lang = self.ocr_source_lang_combo.currentText().lower()
+        source_lang = 'auto' 
         self.translate_signal.emit(source_text, target_lang, source_lang)
 
     def update_output(self, translated_text):
@@ -191,5 +204,5 @@ class TranslatorGUI(QWidget):
 
     def filter_languages(self, text):
         self.lang_combo.clear()
-        filtered_languages = [lang for lang in self.all_languages if text.lower() in lang.lower()]
+        filtered_languages = [lang for lang in self.all_languages_dict.keys() if text.lower() in lang.lower()]
         self.lang_combo.addItems(filtered_languages)
