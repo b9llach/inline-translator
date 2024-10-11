@@ -6,7 +6,7 @@ class TranslatorGUI(QWidget):
     toggle_signal = pyqtSignal(bool)
     language_signal = pyqtSignal(str)
     translate_signal = pyqtSignal(str, str, str) 
-    capture_signal = pyqtSignal(str)
+    capture_signal = pyqtSignal(str, str)
     
     def __init__(self):
         super().__init__()
@@ -76,11 +76,18 @@ class TranslatorGUI(QWidget):
         layout.addWidget(separator)
 
         ocr_layout = QHBoxLayout()
-        ocr_lang_label = QLabel('OCR Language:')
-        self.ocr_lang_combo = QComboBox()
-        self.ocr_lang_combo.addItems(['english'] + [lang for lang in self.language_codes.keys()])
-        ocr_layout.addWidget(ocr_lang_label)
-        ocr_layout.addWidget(self.ocr_lang_combo)
+        ocr_source_lang_label = QLabel('OCR Source Language:')
+        self.ocr_source_lang_combo = QComboBox()
+        self.ocr_source_lang_combo.addItems(['english'] + [lang for lang in self.language_codes.keys()])
+        ocr_layout.addWidget(ocr_source_lang_label)
+        ocr_layout.addWidget(self.ocr_source_lang_combo)
+
+        ocr_target_lang_label = QLabel('OCR Target Language:')
+        self.ocr_target_lang_combo = QComboBox()
+        self.ocr_target_lang_combo.addItems(['english'] + [lang for lang in self.language_codes.keys()])
+        ocr_layout.addWidget(ocr_target_lang_label)
+        ocr_layout.addWidget(self.ocr_target_lang_combo)
+
         layout.addLayout(ocr_layout)
 
         translation_layout = QHBoxLayout()
@@ -105,6 +112,11 @@ class TranslatorGUI(QWidget):
 
         self.setLayout(layout)
 
+    def capture_screen(self):
+        ocr_source_lang = self.ocr_source_lang_combo.currentText().lower()
+        ocr_target_lang = self.ocr_target_lang_combo.currentText().lower()
+        self.capture_signal.emit(ocr_source_lang, ocr_target_lang)
+
     def toggle_translation(self):
         if self.toggle_button.text() == 'Turn On':
             self.toggle_button.setText('Turn Off')
@@ -120,7 +132,7 @@ class TranslatorGUI(QWidget):
     def translate_text(self):
         source_text = self.input_text.toPlainText()
         target_lang = self.lang_combo.currentText().lower()
-        source_lang = self.ocr_lang_combo.currentText().lower()
+        source_lang = self.ocr_source_lang_combo.currentText().lower()
         self.translate_signal.emit(source_text, target_lang, source_lang)
 
     def update_output(self, translated_text):
@@ -130,7 +142,3 @@ class TranslatorGUI(QWidget):
         self.lang_combo.clear()
         filtered_languages = [lang for lang in self.all_languages if text.lower() in lang.lower()]
         self.lang_combo.addItems(filtered_languages)
-
-    def capture_screen(self):
-        ocr_lang = self.ocr_lang_combo.currentText().lower()
-        self.capture_signal.emit(ocr_lang)
