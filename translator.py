@@ -192,7 +192,7 @@ class Translator(QObject):
                 self.buffer += key
 
         self.translation_timer.stop()
-        self.translation_timer.start(1250) 
+        self.translation_timer.start(850) 
 
     def delayed_translate(self):
         if self.buffer.strip() and self.buffer.strip() != self.last_translated:
@@ -215,7 +215,7 @@ class Translator(QObject):
             if translated != self.last_translated:
                 self.is_typing_translation = True
 
-                pyautogui.press('backspace', presses=len(original_text), interval=0.01)
+                pyautogui.press('backspace', presses=len(original_text), interval=0.025)
 
                 is_typing = True
                 pyperclip.copy(translated)

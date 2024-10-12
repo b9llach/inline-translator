@@ -1,6 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QTextEdit, QSplitter, QFrame, QLineEdit
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QIcon
 from deep_translator import GoogleTranslator
 
 class TranslatorGUI(QWidget):
@@ -114,8 +113,7 @@ class TranslatorGUI(QWidget):
         self.lang_combo = QComboBox()
 
         self.lang_combo.clear()
-        self.lang_combo.addItems(sorted(self.language_names.values()))
-        self.lang_combo.setCurrentText('Italian')  # Set default to Italian
+        self.lang_combo.addItems(sorted(self.google_languages.keys())) 
         self.lang_combo.currentTextChanged.connect(self.change_language)
 
         lang_layout = QVBoxLayout()
@@ -138,9 +136,12 @@ class TranslatorGUI(QWidget):
         
         self.ocr_source_lang_combo.clear()
         self.ocr_target_lang_combo.clear()
-        ocr_languages = ['english'] + list(self.ocr_language_codes.keys())
-        self.ocr_source_lang_combo.addItems(ocr_languages)
-        self.ocr_target_lang_combo.addItems(ocr_languages)
+
+        ocr_source_languages = list(self.ocr_language_codes.keys())
+        self.ocr_source_lang_combo.addItems(sorted(ocr_source_languages))
+
+        all_languages = sorted(self.language_names.values())
+        self.ocr_target_lang_combo.addItems(all_languages)
         
         ocr_layout.addWidget(ocr_source_lang_label)
         ocr_layout.addWidget(self.ocr_source_lang_combo)
@@ -179,7 +180,8 @@ class TranslatorGUI(QWidget):
     def update_ocr_languages(self):
         ocr_source_lang = self.ocr_source_lang_combo.currentText().lower()
         ocr_target_lang = self.ocr_target_lang_combo.currentText().lower()
-        self.ocr_languages_changed_signal.emit(ocr_source_lang, ocr_target_lang)
+        ocr_source_code = self.ocr_language_codes.get(ocr_source_lang, 'eng')
+        self.ocr_languages_changed_signal.emit(ocr_source_code, ocr_target_lang)
 
     def capture_screen(self):
         ocr_source_lang = self.ocr_source_lang_combo.currentText().lower()
@@ -195,13 +197,19 @@ class TranslatorGUI(QWidget):
             self.toggle_signal.emit(False)
 
     def change_language(self, language):
+        # This method is now just for emitting the signal, if needed
         self.language_signal.emit(language)
 
     def translate_text(self):
         source_text = self.input_text.toPlainText()
-        target_lang = self.lang_combo.currentText().lower()
-        source_lang = 'auto' 
-        self.translate_signal.emit(source_text, target_lang, source_lang)
+        target_lang = self.google_languages[self.lang_combo.currentText()]  # Get language code
+        source_lang = 'auto'
+        try:
+            translator = GoogleTranslator(source=source_lang, target=target_lang)
+            translated_text = translator.translate(source_text)
+            self.output_text.setPlainText(translated_text)
+        except Exception as e:
+            self.output_text.setPlainText(f"Translation error: {str(e)}")
 
     def update_output(self, translated_text):
         self.output_text.setPlainText(translated_text)
