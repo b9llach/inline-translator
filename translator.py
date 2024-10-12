@@ -215,13 +215,13 @@ class Translator(QObject):
             if translated != self.last_translated:
                 self.is_typing_translation = True
 
-                pyautogui.press('backspace', presses=len(original_text), interval=0.025)
+                pyautogui.press('backspace', presses=len(original_text), interval=0.005)
 
                 is_typing = True
                 pyperclip.copy(translated)
-                time.sleep(0.05)
+                time.sleep(0.005)
                 pyautogui.hotkey('ctrl', 'v')
-                time.sleep(0.1)
+                time.sleep(0.01)
                 is_typing = False
                 
                 self.is_typing_translation = False
